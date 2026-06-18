@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>视频播放</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #1a1a1a; font-family: Arial, sans-serif; color: white; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 20px; }
+        .video-container { 
+            background: #000; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            aspect-ratio: 16/9;
+        }
+        video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain;
+        }
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .btn { 
+            padding: 10px 30px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #388E3C; }
+        .btn-secondary { background: #607D8B; color: white; }
+        .btn-secondary:hover { background: #546E7A; }
+        .debug { 
+            background: #2a2a2a; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 16px;
+            color: #888;
+        }
+        .error { color: #f44336; }
+        .success { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>视频播放</h1>
+        <div class="video-container">
+            <video id="videoPlayer" controls>
+                <source id="videoSource" src="" type="video/mp4">
+                <p id="fallback">您的浏览器不支持视频播放</p>
+            </video>
+        </div>
+        <div class="controls">
+            <button class="btn btn-secondary" onclick="goBack()">返回</button>
+            <button class="btn btn-primary" onclick="downloadVideo()">下载视频</button>
+        </div>
+        <div class="debug" id="debugInfo">
+            <h3>调试信息</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const color = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            logDiv.innerHTML += `<p class="${color}">${new Date().toLocaleTimeString()}: ${message}</p>`;
+        }
+        
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        const filename = getUrlParam('file');
+        const videoUrl = `/recordings/${filename}`;
+        
+        log(`文件名: ${filename}`);
+        log(`视频URL: ${videoUrl}`);
+        
+        const video = document.getElementById('videoPlayer');
+        const source = document.getElementById('videoSource');
+        
+        source.src = videoUrl;
+        
+        video.addEventListener('loadedmetadata', () => {
+            log(`视频加载成功 - 时长: ${video.duration.toFixed(2)}秒, 宽度: ${video.videoWidth}, 高度: ${video.videoHeight}`, 'success');
+        });
+        
+        video.addEventListener('error', (e) => {
+            log(`视频加载失败: ${e.target.error.message}`, 'error');
+            const errorCode = e.target.error.code;
+            const errorMessages = {
+                1: 'MEDIA_ERR_ABORTED - 用户中止了视频加载',
+                2: 'MEDIA_ERR_NETWORK - 网络错误',
+                3: 'MEDIA_ERR_DECODE - 视频解码错误',
+                4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - 视频格式不支持'
+            };
+            log(`错误代码: ${errorCode} - ${errorMessages[errorCode] || '未知错误'}`, 'error');
+        });
+        
+        video.addEventListener('canplay', () => {
+            log('视频可以播放了', 'success');
+        });
+        
+        video.load();
+        
+        function goBack() {
+            window.history.back();
+        }
+        
+        function downloadVideo() {
+            const link = document.createElement('a');
+            link.href = videoUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

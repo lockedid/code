@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能视频分析系统 - 仪表盘</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.5);
+            --glow-purple: 0 0 20px rgba(156, 39, 176, 0.4);
+            --glow-blue: 0 0 20px rgba(33, 150, 243, 0.4);
+            --glow-green: 0 0 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', 'PingFang SC', -apple-system, sans-serif; 
+            background: var(--primary-gradient);
+            color: #E2E8F0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(156, 39, 176, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .header { 
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            color: white; 
+            padding: 24px 32px; 
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 1;
+        }
+        .header h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .header p { opacity: 0.8; margin-top: 6px; font-size: 18px; }
+        
+        .main-content { padding: 24px 32px; position: relative; z-index: 1; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .stat-card { 
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; 
+            padding: 24px; 
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: var(--shadow-lg);
+            background: rgba(255,255,255,0.08);
+        }
+        .stat-icon { font-size: 40px; margin-bottom: 12px; }
+        .stat-value { font-size: 40px; font-weight: 700; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .stat-label { color: #9CA3AF; font-size: 18px; margin-top: 6px; }
+        
+        .section { 
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; 
+            padding: 28px; 
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 24px;
+        }
+        .section-title { font-size: 19px; font-weight: 600; margin-bottom: 22px; color: #fff; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 18px; }
+        th { background: rgba(255,255,255,0.05); font-weight: 600; color: #9CA3AF; }
+        tr:hover { background: rgba(255,255,255,0.05); }
+        .event-type { padding: 6px 12px; border-radius: 20px; font-size: 16px; font-weight: 500; }
+        .event-fall { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+        .event-danger { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+        .event-corridor { background: rgba(33, 150, 243, 0.2); color: #60A5FA; }
+        .event-fire { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+        
+        .btn { 
+            padding: 12px 22px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-weight: 600; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn:hover::before { left: 100%; }
+        .btn-primary { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; }
+        .btn-primary:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-md), var(--glow-purple);
+        }
+        .btn-success { background: linear-gradient(135deg, #10B981, #059669); color: white; }
+        .btn-success:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-md), var(--glow-green);
+        }
+        .btn-danger { background: linear-gradient(135deg, #EF4444, #DC2626); color: white; }
+        .btn-danger:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-md), 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+        .btn-secondary { background: linear-gradient(135deg, #64748B, #475569); color: white; }
+        .btn-secondary:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-md);
+        }
+        
+        .filter-bar { display: flex; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; align-items: center; }
+        .filter-bar input, .filter-bar select { 
+            padding: 12px 16px; 
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 10px; 
+            font-size: 18px;
+            background: rgba(255,255,255,0.05);
+            color: #E2E8F0;
+            transition: all 0.25s ease;
+        }
+        .filter-bar input:focus, .filter-bar select:focus {
+            outline: none;
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+        .filter-bar input::placeholder { color: #6B7280; }
+        
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+        .video-card { 
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px; 
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .video-card video, .video-card img { width: 100%; height: 220px; object-fit: cover; }
+        .video-info { padding: 14px; color: white; background: rgba(0,0,0,0.3); }
+        .video-info h4 { font-size: 18px; margin-bottom: 6px; }
+        .video-info p { font-size: 16px; opacity: 0.7; }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            justify-content: center; 
+            align-items: center; 
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal.active { 
+            display: flex; 
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content { 
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 32px; 
+            border-radius: 16px; 
+            width: 90%; 
+            max-width: 420px;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-xl);
+        }
+        .modal.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+        .modal-content h3 { margin-bottom: 22px; color: #fff; font-size: 18px; font-weight: 600; }
+        .modal-content input { 
+            width: 100%; 
+            padding: 12px 16px; 
+            margin-bottom: 16px; 
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 10px; 
+            font-size: 18px;
+            background: rgba(255,255,255,0.05);
+            color: #E2E8F0;
+            transition: all 0.25s ease;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+        .modal-content input::placeholder { color: #6B7280; }
+        .modal-content .btn { width: 48%; margin-top: 12px; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 24px; }
+        .tab { 
+            padding: 12px 22px; 
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 18px;
+            color: #9CA3AF;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab:hover { 
+            background: rgba(255,255,255,0.1); 
+            color: #E2E8F0;
+            transform: translateY(-2px);
+        }
+        .tab.active { 
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED); 
+            color: white; 
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+            border-color: transparent;
+        }
+        
+        .logout-btn { 
+            float: right; 
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 10px 18px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-weight: 500;
+            transition: all 0.25s ease;
+        }
+        .logout-btn:hover { 
+            background: rgba(255,255,255,0.15); 
+            transform: translateY(-2px);
+        }
+        
+        .refresh-indicator { 
+            display: inline-block; 
+            width: 18px; 
+            height: 18px; 
+            border: 2px solid #8B5CF6; 
+            border-top-color: transparent; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; color: #6B7280; padding: 48px; font-size: 18px; }
+        
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+        .pagination button { 
+            padding: 10px 18px; 
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.05);
+            color: #9CA3AF;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.25s ease;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: rgba(255,255,255,0.1);
+            color: #E2E8F0;
+        }
+        .pagination button.active { 
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED); 
+            color: white; 
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .section table {
+            max-height: 420px;
+            overflow-y: auto;
+            display: block;
+        }
+        .section table thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .section table thead tr {
+            display: table;
+            width: calc(100% - 17px);
+        }
+        .section table tbody {
+            display: table;
+            width: 100%;
+        }
+        .section table tbody tr {
+            display: table;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>智能视频分析系统</h1>
+                <p>实时监控与事件管理</p>
+            </div>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🚶</div>
+                <div class="stat-value" id="stat-fall">0</div>
+                <div class="stat-label">摔倒检测</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-value" id="stat-danger">0</div>
+                <div class="stat-label">危险区域闯入</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🛵</div>
+                <div class="stat-value" id="stat-corridor">0</div>
+                <div class="stat-label">楼道停放电动车</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🚗</div>
+                <div class="stat-value" id="stat-fire">0</div>
+                <div class="stat-label">消防通道停车</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" id="tab-events" onclick="showTab('events')">事件记录</button>
+            <button class="tab" id="tab-recordings" onclick="showTab('recordings')">录像回放</button>
+            <button class="tab" id="tab-cameras" onclick="showTab('cameras')">摄像头管理</button>
+        </div>
+
+        <div id="events-section" class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="section-title">事件告警记录</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span id="refresh-status"></span>
+                    <button class="btn btn-primary" onclick="refreshData()">
+                        刷新
+                    </button>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <input type="datetime-local" id="filter-time-start" placeholder="开始时间">
+                <input type="datetime-local" id="filter-time-end" placeholder="结束时间">
+                <select id="filter-type">
+                    <option value="">全部类型</option>
+                    <option value="fall">摔倒检测</option>
+                    <option value="danger_zone">危险区域</option>
+                    <option value="corridor_parking">楼道停放</option>
+                    <option value="fire_exit_parking">消防通道</option>
+                </select>
+                <button class="btn btn-secondary" onclick="filterEvents()">筛选</button>
+                <button class="btn btn-secondary" onclick="clearFilter()">重置</button>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>类型</th>
+                            <th>消息</th>
+                            <th>摄像头</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-table-body">
+                        <tr><td colspan="4" class="empty-state">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="recordings-section" class="section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="section-title">录像回放</h2>
+                <button class="btn btn-success" onclick="startRecording()">开始录制</button>
+            </div>
+            <div class="video-grid" id="recordings-grid">
+                <div class="empty-state">暂无录像</div>
+            </div>
+        </div>
+
+        <div id="cameras-section" class="section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="section-title">摄像头管理</h2>
+                <button class="btn btn-primary" onclick="showAddCameraModal()">添加摄像头</button>
+            </div>
+            <div class="video-grid" id="cameras-grid">
+                <div class="empty-state">暂无摄像头</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="login-modal">
+        <div class="modal-content">
+            <h3>用户登录</h3>
+            <input type="text" id="login-username" placeholder="用户名" value="admin">
+            <input type="password" id="login-password" placeholder="密码" value="admin123">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="login()">登录</button>
+                <button class="btn btn-secondary" onclick="showRegister()">注册</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="register-modal">
+        <div class="modal-content">
+            <h3>用户注册</h3>
+            <input type="text" id="register-username" placeholder="用户名">
+            <input type="password" id="register-password" placeholder="密码">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="register()">注册</button>
+                <button class="btn btn-secondary" onclick="showLogin()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="add-camera-modal">
+        <div class="modal-content">
+            <h3>添加摄像头</h3>
+            <input type="text" id="camera-name" placeholder="摄像头名称">
+            <input type="text" id="camera-url" placeholder="RTSP地址（可选）">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="addCamera()">添加</button>
+                <button class="btn btn-secondary" onclick="closeModal('add-camera-modal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentTab = 'events';
+        let refreshInterval = null;
+
+        function showTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.getElementById(`${tabName}-section`).style.display = 'block';
+            
+            if (tabName === 'recordings') loadRecordings();
+            if (tabName === 'cameras') loadCameras();
+        }
+
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('user', JSON.stringify(data));
+                    document.getElementById('login-modal').classList.remove('active');
+                    startAutoRefresh();
+                } else {
+                    alert('登录失败：用户名或密码错误');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        function showRegister() {
+            document.getElementById('login-modal').classList.remove('active');
+            document.getElementById('register-modal').classList.add('active');
+        }
+
+        function showLogin() {
+            document.getElementById('register-modal').classList.remove('active');
+            document.getElementById('login-modal').classList.add('active');
+        }
+
+        async function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+            
+            if (!username || !password) {
+                alert('请填写用户名和密码');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (res.ok) {
+                    alert('注册成功，请登录');
+                    showLogin();
+                } else {
+                    alert('注册失败：用户名已存在');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            stopAutoRefresh();
+            document.getElementById('login-modal').classList.add('active');
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/stats`);
+                const data = await res.json();
+                
+                if (data.stats.length > 0) {
+                    const stats = data.stats[0];
+                    document.getElementById('stat-fall').textContent = stats.fall_count || 0;
+                    document.getElementById('stat-danger').textContent = stats.danger_zone_count || 0;
+                    document.getElementById('stat-corridor').textContent = stats.corridor_parking_count || 0;
+                    document.getElementById('stat-fire').textContent = stats.fire_exit_parking_count || 0;
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+
+        async function loadEvents(filter = {}) {
+            try {
+                let url = `${API_BASE}/api/events`;
+                const params = new URLSearchParams();
+                
+                if (filter.start_time) params.append('start_time', filter.start_time);
+                if (filter.end_time) params.append('end_time', filter.end_time);
+                if (filter.event_type) params.append('event_type', filter.event_type);
+                
+                if (params.size > 0) url += '?' + params.toString();
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const tbody = document.getElementById('events-table-body');
+                tbody.innerHTML = '';
+                
+                if (data.events.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无事件记录</td></tr>';
+                    return;
+                }
+                
+                const recentEvents = data.events.slice(0, 50);
+                
+                recentEvents.forEach(event => {
+                    const typeClass = {
+                        'fall': 'event-fall',
+                        'danger_zone': 'event-danger',
+                        'corridor_parking': 'event-corridor',
+                        'fire_exit_parking': 'event-fire'
+                    }[event.type] || 'event-danger';
+                    
+                    const typeLabel = {
+                        'fall': '摔倒检测',
+                        'danger_zone': '危险区域',
+                        'corridor_parking': '楼道停放',
+                        'fire_exit_parking': '消防通道'
+                    }[event.type] || event.type;
+                    
+                    const row = `<tr>
+                        <td>${event.timestamp}</td>
+                        <td><span class="event-type ${typeClass}">${typeLabel}</span></td>
+                        <td>${event.message}</td>
+                        <td>${event.camera_id || '-'}</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('加载事件失败:', error);
+                const tbody = document.getElementById('events-table-body');
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">加载失败，请刷新</td></tr>';
+            }
+        }
+
+        function filterEvents() {
+            loadEvents({
+                start_time: document.getElementById('filter-time-start').value,
+                end_time: document.getElementById('filter-time-end').value,
+                event_type: document.getElementById('filter-type').value
+            });
+        }
+
+        function clearFilter() {
+            document.getElementById('filter-time-start').value = '';
+            document.getElementById('filter-time-end').value = '';
+            document.getElementById('filter-type').value = '';
+            loadEvents();
+        }
+
+        function refreshData() {
+            if (currentTab === 'events') {
+                loadEvents();
+            } else if (currentTab === 'recordings') {
+                loadRecordings();
+            } else if (currentTab === 'cameras') {
+                loadCameras();
+            }
+            loadStats();
+        }
+
+        function startAutoRefresh() {
+            loadStats();
+            loadEvents();
+            
+            refreshInterval = setInterval(() => {
+                loadStats();
+                if (currentTab === 'events') {
+                    loadEvents();
+                }
+            }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        async function loadRecordings() {
+            try {
+                const res = await fetch(`${API_BASE}/api/recordings`);
+                const data = await res.json();
+                
+                const grid = document.getElementById('recordings-grid');
+                grid.innerHTML = '';
+                
+                if (data.recordings.length === 0) {
+                    grid.innerHTML = '<div class="empty-state">暂无录像</div>';
+                    return;
+                }
+                
+                data.recordings.forEach(recording => {
+                    const card = `<div class="video-card">
+                        <img src="https://via.placeholder.com/320x200?text=Recording" alt="Recording">
+                        <div class="video-info">
+                            <h4>${recording.filename}</h4>
+                            <p>${recording.start_time}</p>
+                            <button class="btn btn-primary" style="width: 100%;" onclick="playRecording('${recording.filename}')">播放</button>
+                        </div>
+                    </div>`;
+                    grid.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('加载录像失败:', error);
+            }
+        }
+
+        function playRecording(filename) {
+            window.open(`${API_BASE}/playback?file=${encodeURIComponent(filename)}`, '_blank');
+        }
+
+        async function startRecording() {
+            try {
+                const res = await fetch(`${API_BASE}/api/recording/start?camera_id=1`, { method: 'POST' });
+                if (res.ok) {
+                    alert('开始录制');
+                } else {
+                    const data = await res.json();
+                    alert(data.detail || '录制失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        async function loadCameras() {
+            try {
+                const res = await fetch(`${API_BASE}/api/cameras`);
+                const data = await res.json();
+                
+                const grid = document.getElementById('cameras-grid');
+                grid.innerHTML = '';
+                
+                if (data.cameras.length === 0) {
+                    grid.innerHTML = '<div class="empty-state">暂无摄像头</div>';
+                    return;
+                }
+                
+                data.cameras.forEach(camera => {
+                    const card = `<div class="video-card">
+                        <img src="${API_BASE}/api/cameras/${camera.id}/stream" alt="${camera.name}">
+                        <div class="video-info">
+                            <h4>${camera.name}</h4>
+                            <p>${camera.url || '本地视频'}</p>
+                            <button class="btn btn-success" style="width: 100%; margin-bottom: 5px;" onclick="viewCamera(${camera.id})">查看</button>
+                        </div>
+                    </div>`;
+                    grid.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('加载摄像头失败:', error);
+            }
+        }
+
+        function viewCamera(cameraId) {
+            window.open(`${API_BASE}/view?camera=${cameraId}`, '_blank');
+        }
+
+        function showAddCameraModal() {
+            document.getElementById('add-camera-modal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function addCamera() {
+            const name = document.getElementById('camera-name').value;
+            const url = document.getElementById('camera-url').value;
+            
+            if (!name) {
+                alert('请填写摄像头名称');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/cameras`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, url })
+                });
+                
+                if (res.ok) {
+                    alert('添加成功');
+                    closeModal('add-camera-modal');
+                    loadCameras();
+                } else {
+                    alert('添加失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = localStorage.getItem('user');
+            if (!user) {
+                document.getElementById('login-modal').classList.add('active');
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>

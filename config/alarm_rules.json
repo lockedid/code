@@ -1,0 +1,306 @@
+{
+  "danger_zones": {
+    "zone1": {
+      "name": "危险区域1",
+      "points": [
+        [
+          300,
+          299
+        ],
+        [
+          300,
+          400
+        ],
+        [
+          400,
+          400
+        ],
+        [
+          400,
+          300
+        ]
+      ],
+      "color": [
+        0,
+        0,
+        255
+      ],
+      "enabled": false,
+      "zone_type": "general",
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ]
+    },
+    "fire_exit": {
+      "name": "消防通道",
+      "points": [
+        [
+          100,
+          350
+        ],
+        [
+          100,
+          500
+        ],
+        [
+          1200,
+          450
+        ],
+        [
+          1200,
+          300
+        ]
+      ],
+      "color": [
+        255,
+        165,
+        0
+      ],
+      "enabled": false,
+      "zone_type": "fire_exit",
+      "alarm_level": "critical",
+      "notify_strategy": [
+        "wecom"
+      ]
+    },
+    "corridor": {
+      "name": "loudao quyu",
+      "points": [
+        [
+          600,
+          400
+        ],
+        [
+          600,
+          600
+        ],
+        [
+          800,
+          600
+        ],
+        [
+          800,
+          400
+        ]
+      ],
+      "color": [
+        128,
+        0,
+        128
+      ],
+      "enabled": false,
+      "zone_type": "corridor",
+      "alarm_level": "medium",
+      "notify_strategy": [
+        "wecom"
+      ]
+    },
+    "zone_4": {
+      "name": "测试区域",
+      "points": [
+        [
+          50,
+          50
+        ],
+        [
+          150,
+          50
+        ],
+        [
+          150,
+          150
+        ],
+        [
+          50,
+          150
+        ]
+      ],
+      "color": [
+        143,
+        61,
+        61
+      ],
+      "enabled": false,
+      "zone_type": "general",
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ]
+    },
+    "zone_5": {
+      "name": "1",
+      "points": [
+        [
+          100,
+          100
+        ],
+        [
+          200,
+          100
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          100,
+          200
+        ]
+      ],
+      "color": [
+        255,
+        0,
+        0
+      ],
+      "enabled": false,
+      "zone_type": "general",
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ]
+    }
+  },
+  "alarm_rules": {
+    "fall": {
+      "name": "摔倒检测",
+      "enabled": true,
+      "threshold": 2,
+      "alarm_level": "critical",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "danger_zone": {
+      "name": "危险区域入侵",
+      "enabled": true,
+      "threshold": 0.5,
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "fire_exit": {
+      "name": "消防通道占用",
+      "enabled": true,
+      "threshold": 0.5,
+      "alarm_level": "critical",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "corridor": {
+      "name": "楼道异常",
+      "enabled": true,
+      "threshold": 0.5,
+      "alarm_level": "medium",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "corridor_parking": {
+      "name": "楼道停车",
+      "enabled": true,
+      "threshold": 0.5,
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "fire_exit_parking": {
+      "name": "消防通道停车",
+      "enabled": true,
+      "threshold": 0.5,
+      "alarm_level": "critical",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "crossing": {
+      "name": "越界检测",
+      "enabled": false,
+      "threshold": 0.5,
+      "alarm_level": "high",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    },
+    "loitering": {
+      "name": "徘徊检测",
+      "enabled": false,
+      "threshold": 30,
+      "alarm_level": "medium",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 30
+    },
+    "abandoned": {
+      "name": "遗留物检测",
+      "enabled": false,
+      "threshold": 60,
+      "alarm_level": "medium",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 60
+    },
+    "intrusion": {
+      "name": "入侵检测",
+      "enabled": false,
+      "threshold": 0.5,
+      "alarm_level": "critical",
+      "notify_strategy": [
+        "wecom"
+      ],
+      "min_interval": 10
+    }
+  },
+  "notify_providers": {
+    "wecom": {
+      "enabled": true,
+      "priority": 1
+    },
+    "dingtalk": {
+      "enabled": true,
+      "priority": 2
+    },
+    "email": {
+      "enabled": false,
+      "priority": 3
+    },
+    "sms": {
+      "enabled": false,
+      "priority": 4
+    }
+  },
+  "alarm_levels": {
+    "critical": {
+      "name": "紧急",
+      "color": "#ff0000",
+      "timeout": 5
+    },
+    "high": {
+      "name": "高",
+      "color": "#ff6600",
+      "timeout": 10
+    },
+    "medium": {
+      "name": "中",
+      "color": "#ffff00",
+      "timeout": 15
+    },
+    "low": {
+      "name": "低",
+      "color": "#00ff00",
+      "timeout": 30
+    }
+  }
+}

@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NeuroCortex Eye - 智能视频分析系统</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
+            --secondary-gradient: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.5);
+            --glow-purple: 0 0 20px rgba(156, 39, 176, 0.4);
+            --glow-blue: 0 0 20px rgba(33, 150, 243, 0.4);
+            --glow-green: 0 0 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        body { 
+            margin: 0; 
+            padding: 24px; 
+            background: var(--primary-gradient);
+            font-family: 'Segoe UI', 'PingFang SC', -apple-system, sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(156, 39, 176, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container { 
+            max-width: 1920px; 
+            margin: 0 auto; 
+            display: flex; 
+            gap: 24px; 
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+        }
+        .main-content { flex: 1; min-width: 0; }
+        .sidebar { 
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; 
+            padding: 24px; 
+            display: flex; 
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+        h1 { 
+            color: #fff; 
+            text-align: center; 
+            margin-bottom: 24px; 
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .video-section { margin-bottom: 24px; }
+        .video-grid { 
+            display: grid; 
+            gap: 16px; 
+            height: 100%; 
+            min-height: 520px; 
+        }
+        .video-grid.single { grid-template-columns: 1fr; }
+        .video-grid.quad { grid-template-columns: repeat(2, 1fr); }
+        .video-grid.nine { grid-template-columns: repeat(3, 1fr); }
+        .video-container { 
+            position: relative; 
+            background: #0a0a0a; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            width: 100%; 
+            aspect-ratio: 16 / 10;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: var(--shadow-xl);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .video-container:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl), var(--glow-blue);
+        }
+        .video-container img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
+        .video-label { 
+            position: absolute; 
+            top: 12px; 
+            left: 12px; 
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            color: white; 
+            padding: 8px 14px; 
+            border-radius: 10px; 
+            font-size: 17px;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .video-status { 
+            position: absolute; 
+            top: 12px; 
+            right: 12px; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50, 0 0 20px rgba(76, 175, 80, 0.5);
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 10px #4CAF50, 0 0 20px rgba(76, 175, 80, 0.5); }
+            50% { box-shadow: 0 0 15px #4CAF50, 0 0 30px rgba(76, 175, 80, 0.7); }
+        }
+        .controls { 
+            display: flex; 
+            gap: 16px; 
+            flex-wrap: wrap; 
+            margin-bottom: 24px;
+            padding: 20px 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+        }
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 12px; 
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn:hover::before {
+            left: 100%;
+        }
+        .btn:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-md);
+        }
+        .btn:active { 
+            transform: translateY(-1px); 
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-video { 
+            background: linear-gradient(135deg, #2563EB, #1D4ED8); 
+            color: white; 
+        }
+        .btn-video:hover { 
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            box-shadow: var(--shadow-md), var(--glow-blue);
+        }
+        .btn-video.active { 
+            background: linear-gradient(135deg, #1E40AF, #1E3A8A); 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); 
+            transform: translateY(0);
+        }
+        .btn-layout { 
+            background: linear-gradient(135deg, #64748B, #475569); 
+            color: white; 
+        }
+        .btn-layout:hover { 
+            background: linear-gradient(135deg, #94A3B8, #64748B);
+            box-shadow: var(--shadow-md);
+        }
+        .btn-layout.active { 
+            background: linear-gradient(135deg, #334155, #1E293B); 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); 
+            transform: translateY(0);
+        }
+        .btn-action { 
+            background: linear-gradient(135deg, #10B981, #059669); 
+            color: white; 
+        }
+        .btn-action:hover { 
+            background: linear-gradient(135deg, #34D399, #10B981);
+            box-shadow: var(--shadow-md), var(--glow-green);
+        }
+        .btn-danger { 
+            background: linear-gradient(135deg, #EF4444, #DC2626); 
+            color: white; 
+        }
+        .btn-danger:hover { 
+            background: linear-gradient(135deg, #F87171, #EF4444);
+            box-shadow: var(--shadow-md), 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+        .btn-vlm { 
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED); 
+            color: white; 
+        }
+        .btn-vlm:hover { 
+            background: linear-gradient(135deg, #A78BFA, #8B5CF6);
+            box-shadow: var(--shadow-md), var(--glow-purple);
+        }
+        .btn-vlm:disabled { 
+            background: linear-gradient(135deg, #4B5563, #374151); 
+            cursor: not-allowed; 
+            transform: none; 
+            box-shadow: none; 
+            opacity: 0.7;
+        }
+        .btn-chat { 
+            background: linear-gradient(135deg, #06B6D4, #0891B2); 
+            color: white; 
+        }
+        .btn-chat:hover { 
+            background: linear-gradient(135deg, #22D3EE, #06B6D4);
+            box-shadow: var(--shadow-md);
+        }
+        .info { color: #aaa; text-align: center; margin-bottom: 15px; }
+        .layout-selector { display: flex; gap: 5px; }
+        .stream-info { color: #888; font-size: 16px; }
+        
+        .assistant-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .assistant-icon { width: 40px; height: 40px; background: #9C27B0; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .assistant-title { color: white; font-size: 18px; font-weight: bold; }
+        .analysis-area { margin-bottom: 20px; }
+        .analysis-result { 
+            background: #1a1a1a; 
+            border-radius: 8px; 
+            padding: 15px;
+            min-height: 150px;
+            color: #ddd;
+            font-size: 18px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .loading { color: #9C27B0; font-style: italic; }
+        
+        .error { color: #f44336; }
+        .success { color: #4CAF50; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; }
+        .status-online { background: #4CAF50; }
+        .status-offline { background: #f44336; }
+        .status-loading { background: #FF9800; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .vlm-status { display: flex; align-items: center; gap: 8px; color: #888; font-size: 16px; margin-bottom: 15px; }
+        .prompt-input { width: 100%; padding: 10px; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        .prompt-input:focus { outline: none; border-color: #9C27B0; }
+        .analysis-history { max-height: 200px; overflow-y: auto; }
+        .history-item { background: #1a1a1a; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .history-prompt { color: #9C27B0; font-size: 16px; margin-bottom: 8px; }
+        .history-response { color: #ddd; font-size: 17px; }
+        
+        .chat-container { 
+            height: 650px; 
+            display: flex; 
+            flex-direction: column; 
+            border: 1px solid #444; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+        .chat-header { 
+            padding: 14px 16px; 
+            background: linear-gradient(135deg, #333, #2a2a2a); 
+            color: white; 
+            font-weight: bold; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-shrink: 0; 
+            border-bottom: 1px solid #444;
+        }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: #1a1a1a; }
+        .chat-input-area { 
+            padding: 12px; 
+            background: linear-gradient(135deg, #333, #2a2a2a); 
+            display: flex; 
+            gap: 10px; 
+            flex-shrink: 0; 
+            border-top: 1px solid #444;
+        }
+        .chat-input { 
+            flex: 1; 
+            padding: 10px 14px; 
+            border: 1px solid #444; 
+            border-radius: 20px; 
+            background: linear-gradient(135deg, #2a2a2a, #222); 
+            color: white;
+            font-size: 18px;
+            transition: all 0.25s ease;
+        }
+        .chat-input:focus { outline: none; border-color: #9C27B0; box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2); }
+        .message { margin-bottom: 15px; max-width: 90%; }
+        .message.user { text-align: right; }
+        .message.assistant { text-align: left; }
+        .message-content { 
+            display: inline-block; 
+            padding: 10px 15px; 
+            border-radius: 15px;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        .message.user .message-content { background: #2196F3; color: white; border-radius: 15px 15px 5px 15px; }
+        .message.assistant .message-content { background: #444; color: #ddd; border-radius: 15px 15px 15px 5px; }
+        .message-time { font-size: 15px; color: #666; margin-top: 5px; }
+        
+        .message.user .message-time { text-align: right; }
+        .message.assistant .message-time { text-align: left; }
+        .tab-container { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab { 
+            padding: 8px 18px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            background: linear-gradient(135deg, #333, #2a2a2a); 
+            color: #888; 
+            font-size: 17px; 
+            font-weight: 500;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        .tab:hover { 
+            background: linear-gradient(135deg, #444, #333); 
+            color: #aaa;
+            transform: translateY(-1px);
+        }
+        .tab.active { 
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2); 
+            color: white; 
+            box-shadow: 0 4px 10px rgba(156, 39, 176, 0.4);
+        }
+        
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding-top: 10px;
+        }
+        .checkbox-label { color: #888; font-size: 17px; display: flex; align-items: center; gap: 5px; }
+        .content-wrapper { display: flex; gap: 24px; align-items: flex-start; width: 100%; }
+        .video-section { 
+            width: calc(70% - 12px); 
+            min-height: 620px; 
+            max-height: calc(100vh - 200px);
+            flex-shrink: 0;
+            flex-grow: 0;
+            flex-basis: calc(70% - 12px);
+        }
+        .sidebar { 
+            width: calc(30% - 12px); 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 620px;
+            max-height: calc(100vh - 200px);
+            flex-shrink: 0;
+            flex-grow: 0;
+            flex-basis: calc(30% - 12px);
+        }
+        
+        .alarm-container { 
+            height: 650px; 
+            display: flex; 
+            flex-direction: column; 
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .alarm-header { 
+            padding: 14px 20px; 
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); 
+            color: white; 
+            font-weight: 600; 
+            font-size: 19px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-shrink: 0; 
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .alarm-tabs { 
+            display: flex; 
+            gap: 6px; 
+            padding: 10px 20px; 
+            background: rgba(0,0,0,0.2); 
+            flex-shrink: 0; 
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .alarm-tab { 
+            padding: 10px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            background: rgba(255,255,255,0.05); 
+            color: #9CA3AF; 
+            font-size: 16px; 
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .alarm-tab:hover { 
+            background: rgba(255,255,255,0.1); 
+            color: #D1D5DB;
+            transform: translateY(-1px);
+        }
+        .alarm-tab.active { 
+            background: linear-gradient(135deg, #EF4444, #DC2626); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        .alarm-list { 
+            flex: 1; 
+            padding: 12px; 
+            overflow-y: auto; 
+            background: rgba(0,0,0,0.1); 
+        }
+        .alarm-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .alarm-list::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+        .alarm-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        .alarm-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .alarm-item { 
+            background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); 
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-bottom: 12px; 
+            border-left: 4px solid #EF4444;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .alarm-item:hover { 
+            transform: translateX(6px); 
+            box-shadow: var(--shadow-md);
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+        }
+        .alarm-item.acknowledged { 
+            border-left-color: #6B7280; 
+            opacity: 0.7; 
+            background: linear-gradient(135deg, #252525, #1f1f1f);
+        }
+        
+        .config-container { height: calc(100% - 60px); display: flex; flex-direction: column; }
+        .config-header { padding: 12px 15px; background: linear-gradient(135deg, #333, #2a2a2a); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-radius: 8px 8px 0 0; }
+        .config-tabs { display: flex; gap: 5px; padding: 8px 15px; background: linear-gradient(135deg, #2a2a2a, #222); flex-shrink: 0; }
+        .config-tab { 
+            padding: 10px 16px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            background: #444; 
+            color: #888; 
+            font-size: 16px; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .config-tab:hover { background: #555; color: #aaa; }
+        .config-tab.active { 
+            background: linear-gradient(135deg, #4CAF50, #388E3C); 
+            color: white; 
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+        }
+        .config-content { flex: 1; padding: 12px; overflow-y: auto; background: #1a1a1a; }
+        .config-item { 
+            background: linear-gradient(135deg, #2a2a2a, #222); 
+            border-radius: 10px; 
+            padding: 15px; 
+            margin-bottom: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s ease;
+        }
+        .config-item:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); }
+        .config-item h4 { margin: 0 0 12px 0; color: #4CAF50; font-size: 18px; font-weight: 600; }
+        .config-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 17px; }
+        .config-row label { color: #888; }
+        .config-row span { color: #fff; }
+        .config-row input[type="checkbox"] { 
+            width: 16px; 
+            height: 16px; 
+            accent-color: #4CAF50;
+            cursor: pointer;
+        }
+        .config-row select { 
+            background: linear-gradient(135deg, #333, #2a2a2a); 
+            color: white; 
+            border: 1px solid #555; 
+            border-radius: 6px; 
+            padding: 6px 10px; 
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .config-row select:hover { border-color: #666; }
+        .config-row select:focus { outline: none; border-color: #4CAF50; }
+        .config-row input[type="number"], .config-row input[type="text"] { 
+            background: linear-gradient(135deg, #333, #2a2a2a); 
+            color: white; 
+            border: 1px solid #555; 
+            border-radius: 6px; 
+            padding: 6px 10px; 
+            font-size: 16px; 
+            width: 80px;
+            transition: all 0.2s ease;
+        }
+        .config-row input[type="number"]:focus, .config-row input[type="text"]:focus { outline: none; border-color: #4CAF50; }
+        .config-actions { display: flex; gap: 6px; margin-top: 12px; }
+        .config-btn { 
+            padding: 6px 12px; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        .config-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); }
+        .config-btn.save { background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; }
+        .config-btn.delete { background: linear-gradient(135deg, #f44336, #d32f2f); color: white; }
+        .config-btn.cancel { background: linear-gradient(135deg, #666, #555); color: white; }
+        .config-btn.add { background: linear-gradient(135deg, #2196F3, #1976D2); color: white; margin-bottom: 12px; }
+        
+        .draw-canvas {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 25px);
+            cursor: crosshair;
+            display: none;
+            border: none;
+        }
+        
+        .draw-canvas.active {
+            display: block;
+        }
+        
+        .drawing-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .toast-success {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .toast-error {
+            background: linear-gradient(135deg, #f44336, #da190b);
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background: linear-gradient(135deg, #2a2a2a, #222);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 650px;
+            max-height: 85vh;
+            overflow: hidden;
+            transform: scale(0.85) translateY(30px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid #444;
+        }
+        
+        .modal-overlay.show .modal {
+            transform: scale(1) translateY(0);
+        }
+        
+        .modal-header {
+            padding: 18px 22px;
+            background: linear-gradient(135deg, #333, #2a2a2a);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        .modal-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #888;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: all 0.25s ease;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 80px);
+        }
+        
+        .ai-reasoning-content {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        
+        .reasoning-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .reasoning-section:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.12);
+        }
+        
+        .reasoning-section-title {
+            color: #A78BFA;
+            font-size: 19px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .risk-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 16px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+        }
+        
+        .risk-level-badge {
+            padding: 10px 20px;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .risk-level-critical { 
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .risk-level-high { 
+            background: linear-gradient(135deg, #EF4444, #DC2626); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        .risk-level-medium { 
+            background: linear-gradient(135deg, #F59E0B, #D97706); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        .risk-level-low { 
+            background: linear-gradient(135deg, #10B981, #059669); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .risk-score-display {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .reasoning-chain-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+        
+        .chain-node-item {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 14px 28px;
+            border-radius: 28px;
+            color: #E2E8F0;
+            font-size: 17px;
+            text-align: center;
+            max-width: 280px;
+            word-break: break-word;
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .chain-node-item:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .chain-arrow-item {
+            color: #A78BFA;
+            font-size: 22px;
+            animation: pulse-purple 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-purple {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        .recommendation-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .recommendation-list li {
+            padding: 14px 18px;
+            color: #E2E8F0;
+            font-size: 18px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 10px;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .recommendation-list li:hover {
+            background: linear-gradient(135deg, #333, #2a2a2a);
+            transform: translateX(4px);
+        }
+        
+        .recommendation-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .recommendation-number {
+            color: #4CAF50;
+            font-weight: 600;
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .ai-report-text {
+            color: #ddd;
+            font-size: 18px;
+            line-height: 1.7;
+            white-space: pre-line;
+        }
+        
+        .modal-loading {
+            text-align: center;
+            color: #9C27B0;
+            font-style: italic;
+            padding: 50px;
+            font-size: 19px;
+        }
+        
+        .config-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        
+        .config-item.drag-over {
+            border: 2px dashed #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        .alarm-type { color: #f44336; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+        .alarm-message { color: #ddd; font-size: 17px; margin-bottom: 8px; }
+        .alarm-time { color: #666; font-size: 15px; }
+        .alarm-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .alarm-btn { 
+            padding: 8px 14px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+        .alarm-btn-ack { 
+            background: linear-gradient(135deg, #10B981, #059669); 
+            color: white; 
+        }
+        .alarm-btn-ack:hover { 
+            background: linear-gradient(135deg, #34D399, #10B981);
+            box-shadow: var(--shadow-md), var(--glow-green);
+            transform: translateY(-2px);
+        }
+        .alarm-btn-ai { 
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED); 
+            color: white; 
+        }
+        .alarm-btn-ai:hover { 
+            background: linear-gradient(135deg, #A78BFA, #8B5CF6);
+            box-shadow: var(--shadow-md), var(--glow-purple);
+            transform: translateY(-2px);
+        }
+        .no-alarms { color: #9CA3AF; text-align: center; padding: 40px 20px; font-size: 18px; }
+        .alarm-badge { 
+            background: linear-gradient(135deg, #EF4444, #DC2626); 
+            color: white; 
+            font-size: 15px; 
+            padding: 3px 8px; 
+            border-radius: 10px; 
+            margin-left: 6px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+        }
+        .sidebar { width: 40%; display: flex; flex-direction: column; min-height: 600px; }
+        
+        .video-selector-panel {
+            display: none;
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+        }
+        .video-selector-panel.active {
+            display: block;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .video-selector-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .video-select-item {
+            background: #1a1a1a;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .video-select-item label {
+            display: block;
+            color: #888;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .video-select-item select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: white;
+            font-size: 17px;
+        }
+        .apply-videos-btn {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .apply-videos-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <h1>NeuroCortex Eye</h1>
+            
+            <!-- <div class="info">
+                当前布局: <span id="currentLayout">单画面</span> | 
+                检测模型: YOLO11m + YOLO11m-Pose | 
+                危险区域检测: ✅ |
+                录制状态: <span id="recordingStatus" style="color: #4CAF50;">未录制</span>
+            </div> -->
+            
+            <div class="controls">
+                <span style="color: white; font-weight: bold;">选择摄像头:</span>
+                <select id="camera-select" onchange="switchCameraSource()" style="padding: 8px 15px; border-radius: 4px; background: #333; color: white; border: 1px solid #444; min-width: 200px;">
+                    <option value="local_摄像头1.mp4"> 摄像头1</option>
+                </select>
+                
+                <span id="stream-label" style="color: white; font-weight: bold; margin-left: 10px; display: none;">流地址:</span>
+                <input type="text" id="stream-url" placeholder="rtmp://... 或 rtsp://..." style="padding: 8px 15px; border-radius: 4px; background: #333; color: white; border: 1px solid #444; display: none; width: 280px;">
+                <button id="stream-connect" onclick="connectStream()" style="padding: 8px 15px; font-size: 16px; display: none; background: linear-gradient(135deg, #10B981, #059669); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">连接</button>
+                <button id="stream-disconnect" onclick="disconnectStream()" style="padding: 8px 15px; font-size: 16px; display: none; background: linear-gradient(135deg, #EF4444, #DC2626); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">断开</button>
+                <span id="stream-status" style="color: #4CAF50; font-size: 14px; display: none; margin-left: 5px;">● 已连接</span>
+                
+                <span style="color: white; font-weight: bold; margin-left: 20px;">布局:</span>
+                <div class="layout-selector">
+                    <button class="btn btn-layout active" onclick="setLayout('single')">1画面</button>
+                    <button class="btn btn-layout" onclick="setLayout('quad')">4画面</button>
+                    <button class="btn btn-layout" onclick="setLayout('nine')">9画面</button>
+                </div>
+                
+                <div style="margin-left: auto; display: flex; gap: 10px;">
+                    <button class="btn btn-action" id="btnRecord" onclick="toggleRecording()">录制</button>
+                    <button class="btn btn-danger" onclick="location.href='/dashboard'">仪表盘</button>
+                </div>
+            </div>
+            
+            <div class="content-wrapper">
+                <div class="video-section">
+                    <div class="video-grid single" id="videoGrid">
+                        <div class="video-container">
+                            <div class="video-label">摄像头 1</div>
+                            <div class="video-status"></div>
+                            <img id="video1" src="/stream?filename=摄像头1.mp4" />
+                            <canvas id="drawCanvas" class="draw-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar">
+                    <div class="assistant-header">
+                        <div class="assistant-icon">🤖</div>
+                        <div>
+                            <div class="assistant-title">智能分析助手</div>
+                            <div class="vlm-status">
+                                <div id="vlmStatus" class="status-indicator status-offline"></div>
+                                <span id="vlmStatusText">模型未加载</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-container">
+                        <button class="tab active" onclick="switchTab('chat')">💬 智能对话</button>
+                        <button class="tab" onclick="switchTab('alarm')">⚠ 告警中心</button>
+                        <button class="tab" onclick="switchTab('config')">⚙️ 规则配置</button>
+                    </div>
+                    
+                    <div id="chatTab" class="tab-content" style="display: block;">
+                        <div class="chat-container">
+                            <div class="chat-header">
+                                <span>智能对话</span>
+                                <button class="btn btn-chat" style="padding: 5px 10px; font-size: 16px;" onclick="clearChat()">清空</button>
+                            </div>
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="message assistant">
+                                    <div class="message-content">您好！我是智能视频分析助手。请问有什么可以帮助您的？</div>
+                                    <div class="message-time">刚刚</div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <input type="text" class="chat-input" id="chatInput" placeholder="输入消息..." onkeyup="handleKeyPress(event)" />
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="useImage" checked /> 使用当前画面
+                                </label>
+                                <button class="btn btn-chat" onclick="sendMessage()">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="alarmTab" class="tab-content" style="display: none;">
+                        <div class="alarm-container">
+                            <div class="alarm-header">
+                                <span>⚠ 告警中心</span>
+                                <button class="btn btn-chat" style="padding: 5px 10px; font-size: 16px;" onclick="refreshAlarms()">刷新</button>
+                            </div>
+                            
+                            <div class="alarm-tabs">
+                                <button class="alarm-tab active" onclick="showAlarmTab('active')">活动告警</button>
+                                <button class="alarm-tab" onclick="showAlarmTab('history')">历史记录</button>
+                            </div>
+                            
+                            <div id="activeAlarms" class="alarm-list">
+                                <div style="color: #666; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                            
+                            <div id="historyAlarms" class="alarm-list" style="display: none;">
+                                <div style="color: #666; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="configTab" class="tab-content" style="display: none;">
+                        <div class="config-container">
+                            <div class="config-header">
+                                <span>⚙️ 告警规则配置</span>
+                                <button class="btn btn-chat" style="padding: 5px 10px; font-size: 16px;" onclick="loadConfig()">刷新配置</button>
+                            </div>
+                            
+                            <div class="config-tabs">
+                                <button class="config-tab active" onclick="showConfigTab('zones')">危险区域</button>
+                                <button class="config-tab" onclick="showConfigTab('rules')">告警规则</button>
+                                <button class="config-tab" onclick="showConfigTab('notify')">通知设置</button>
+                            </div>
+                            
+                            <div id="zonesConfig" class="config-content">
+                                <div style="color: #666; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                            
+                            <div id="rulesConfig" class="config-content" style="display: none;">
+                                <div style="color: #666; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                            
+                            <div id="notifyConfig" class="config-content" style="display: none;">
+                                <div style="color: #666; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentLayout = 'single';
+        let isRecording = false;
+        let videoFiles = [];
+        let vlmLoaded = false;
+        let chatHistory = [];
+        let currentTab = 'chat';
+        
+        const DOM_CACHE = {};
+        
+        function getCachedElement(id) {
+            if (!DOM_CACHE[id]) {
+                DOM_CACHE[id] = document.getElementById(id);
+            }
+            return DOM_CACHE[id];
+        }
+        
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        function throttle(func, limit) {
+            let inThrottle;
+            return function executedFunction(...args) {
+                if (!inThrottle) {
+                    func(...args);
+                    inThrottle = true;
+                    setTimeout(() => (inThrottle = false), limit);
+                }
+            };
+        }
+        
+        function changeVideo(filename, btn) {
+            document.getElementById('video1').src = '/stream?filename=' + filename;
+            document.getElementById('currentVideo').textContent = filename;
+            document.querySelectorAll('.btn-video').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+        }
+        
+        function loadCameraSources() {
+            let videosData = [];
+            
+            fetch('/videos')
+                .then(response => response.json())
+                .then(data => {
+                    videosData = data.videos || [];
+                    window.allVideos = videosData;
+                    
+                    const select = document.getElementById('camera-select');
+                    select.innerHTML = '';
+                    
+                    videosData.forEach(video => {
+                        const option = document.createElement('option');
+                        option.value = `local_${video}`;
+                        option.textContent = ` ${video.replace(/\.[^/.]+$/, '')}`;
+                        select.appendChild(option);
+                    });
+                    
+                    return fetch('/api/cameras');
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('camera-select');
+                    data.cameras.forEach(camera => {
+                        const option = document.createElement('option');
+                        option.value = `camera_${camera.id}`;
+                        option.textContent = camera.url ? `📡 ${camera.name} (RTSP)` : `📷 ${camera.name}`;
+                        select.appendChild(option);
+                    });
+                    
+                    const rtspOption = document.createElement('option');
+                    rtspOption.value = 'rtsp_custom';
+                    rtspOption.textContent = '🔗 自定义RTSP地址';
+                    select.appendChild(rtspOption);
+                    
+                    const rtmpOption = document.createElement('option');
+                    rtmpOption.value = 'rtmp_custom';
+                    rtmpOption.textContent = '📡 自定义RTMP推流地址';
+                    select.appendChild(rtmpOption);
+                })
+                .catch(err => console.error('加载摄像头/视频列表失败:', err));
+        }
+        
+        function switchCameraSource() {
+            const select = document.getElementById('camera-select');
+            const value = select.value;
+            const isCustomStream = (value === 'rtsp_custom' || value === 'rtmp_custom');
+            
+            document.getElementById('stream-label').style.display = isCustomStream ? 'inline-block' : 'none';
+            document.getElementById('stream-url').style.display = isCustomStream ? 'inline-block' : 'none';
+            document.getElementById('stream-connect').style.display = isCustomStream ? 'inline-block' : 'none';
+            document.getElementById('stream-disconnect').style.display = 'none';
+            document.getElementById('stream-status').style.display = 'none';
+            
+            if (value === 'rtmp_custom') {
+                document.getElementById('stream-url').placeholder = 'rtmp://...';
+            } else if (value === 'rtsp_custom') {
+                document.getElementById('stream-url').placeholder = 'rtsp://...';
+            }
+            
+            if (value.startsWith('local_')) {
+                const videoFile = value.substring(6);
+                document.getElementById('video1').src = `/stream?filename=${videoFile}`;
+            } else if (value.startsWith('camera_')) {
+                const cameraId = value.substring(7);
+                document.getElementById('video1').src = `/api/cameras/${cameraId}/stream`;
+            }
+        }
+        
+        let currentRtmpStreamId = null;
+        
+        async function connectStream() {
+            const url = document.getElementById('stream-url').value.trim();
+            if (!url) {
+                alert('请输入流地址');
+                return;
+            }
+            
+            const connectBtn = document.getElementById('stream-connect');
+            const disconnectBtn = document.getElementById('stream-disconnect');
+            const statusSpan = document.getElementById('stream-status');
+            
+            connectBtn.textContent = '连接中...';
+            connectBtn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/rtmp/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, camera_id: 1, record: false })
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || '连接失败');
+                }
+                
+                const data = await res.json();
+                currentRtmpStreamId = data.stream_id;
+                
+                document.getElementById('video1').src = `/api/rtmp/stream/${data.stream_id}/view`;
+                
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
+                statusSpan.style.display = 'inline';
+                statusSpan.textContent = '● 已连接';
+                statusSpan.style.color = '#4CAF50';
+                
+            } catch (e) {
+                alert('连接失败: ' + e.message);
+                connectBtn.textContent = '连接';
+                connectBtn.disabled = false;
+            }
+        }
+        
+        async function disconnectStream() {
+            if (!currentRtmpStreamId) return;
+            
+            try {
+                await fetch(`/api/rtmp/stream/${currentRtmpStreamId}/disconnect`, { method: 'POST' });
+            } catch (e) {
+                console.error('断开流失败:', e);
+            }
+            
+            currentRtmpStreamId = null;
+            document.getElementById('video1').src = '';
+            
+            document.getElementById('stream-connect').style.display = 'inline-block';
+            document.getElementById('stream-connect').textContent = '连接';
+            document.getElementById('stream-connect').disabled = false;
+            document.getElementById('stream-disconnect').style.display = 'none';
+            document.getElementById('stream-status').style.display = 'none';
+        }
+        
+        function connectRTSP() {
+            const url = document.getElementById('stream-url').value;
+            if (!url) {
+                alert('请输入RTSP地址');
+                return;
+            }
+            document.getElementById('video1').src = `/stream/rtmp?url=${encodeURIComponent(url)}`;
+        }
+        
+        function setLayout(layout) {
+            currentLayout = layout;
+            const grid = document.getElementById('videoGrid');
+            grid.className = `video-grid ${layout}`;
+            
+            const layoutNames = {
+                'single': '单画面',
+                'quad': '4画面',
+                'nine': '9画面'
+            };
+            const currentLayoutEl = document.getElementById('currentLayout');
+            if (currentLayoutEl) {
+                currentLayoutEl.textContent = layoutNames[layout];
+            }
+            
+            document.querySelectorAll('.btn-layout').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const videos = getVideosForLayout(layout);
+            renderVideoGrid(videos);
+        }
+        
+        function getVideosForLayout(layout) {
+            const layoutCounts = {
+                'single': 1,
+                'quad': 4,
+                'nine': 9
+            };
+            const count = layoutCounts[layout];
+            
+            if (!window.allVideos || window.allVideos.length === 0) {
+                return Array(count).fill('test.mp4');
+            }
+            
+            const videos = [];
+            const videoCount = window.allVideos.length;
+            
+            for (let i = 0; i < count; i++) {
+                videos.push(window.allVideos[i % videoCount]);
+            }
+            
+            return videos;
+        }
+        
+        // 视频容器缓存，避免重复创建
+        const videoContainers = {};
+        
+        function renderVideoGrid(videos) {
+            const grid = document.getElementById('videoGrid');
+            const layoutCounts = {
+                'single': 1,
+                'quad': 4,
+                'nine': 9
+            };
+            const count = layoutCounts[currentLayout];
+            
+            // 获取现有容器数量
+            const existingCount = grid.children.length;
+            
+            // 如果容器数量不足，添加新容器
+            for (let i = existingCount + 1; i <= count; i++) {
+                const container = document.createElement('div');
+                container.className = 'video-container';
+                container.innerHTML = `
+                    <div class="video-label">摄像头 ${i}</div>
+                    <div class="video-status"></div>
+                    <img id="video${i}" src="" />
+                `;
+                grid.appendChild(container);
+                videoContainers[i] = container;
+            }
+            
+            // 如果容器数量过多，移除多余的并停止图片加载
+            while (grid.children.length > count) {
+                const removed = grid.removeChild(grid.lastChild);
+                const img = removed.querySelector('img');
+                if (img) {
+                    img.src = ''; // 停止加载
+                    img.onload = null;
+                    img.onerror = null;
+                }
+            }
+            
+            // 更新每个容器的视频源
+            for (let i = 1; i <= count; i++) {
+                const videoFile = videos && videos[i - 1] ? videos[i - 1] : 'test.mp4';
+                const img = document.getElementById(`video${i}`);
+                
+                // 只有当视频文件改变时才更新src，避免不必要的重新加载
+                const currentSrc = img.src;
+                if (!currentSrc.includes(videoFile) || currentSrc === '') {
+                    // 使用时间戳避免缓存问题
+                    img.src = `/stream?filename=${videoFile}&t=${Date.now()}`;
+                }
+            }
+        }
+        
+        function loadVideoButtons() {
+            fetch('/videos')
+                .then(response => response.json())
+                .then(data => {
+                    videoFiles = data.videos;
+                    const container = document.getElementById('videoButtons');
+                    data.videos.forEach((video, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-video' + (index === 0 ? ' active' : '');
+                        btn.textContent = video;
+                        btn.onclick = () => {
+                            document.getElementById('video1').src = '/stream?filename=' + video;
+                            document.querySelectorAll('.btn-video').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                        };
+                        container.appendChild(btn);
+                    });
+                });
+        }
+        
+        async function toggleRecording() {
+            const btn = document.getElementById('btnRecord');
+            const status = document.getElementById('recordingStatus');
+            
+            if (!isRecording) {
+                const res = await fetch('/api/recording/start?camera_id=1', { method: 'POST' });
+                if (res.ok) {
+                    isRecording = true;
+                    btn.textContent = '停止录制';
+                    btn.className = 'btn btn-danger';
+                    status.textContent = '录制中';
+                    status.style.color = '#f44336';
+                }
+            } else {
+                const res = await fetch('/api/recording/stop?camera_id=1', { method: 'POST' });
+                if (res.ok) {
+                    isRecording = false;
+                    btn.textContent = '开始录制';
+                    btn.className = 'btn btn-action';
+                    status.textContent = '未录制';
+                    status.style.color = '#4CAF50';
+                }
+            }
+        }
+        
+        async function checkVLMStatus() {
+            try {
+                const res = await fetch('/api/vlm/status');
+                const data = await res.json();
+                vlmLoaded = data.loaded;
+                
+                const statusDiv = document.getElementById('vlmStatus');
+                const statusText = document.getElementById('vlmStatusText');
+                
+                if (vlmLoaded) {
+                    statusDiv.className = 'status-indicator status-online';
+                    statusText.textContent = '模型已加载';
+                } else {
+                    statusDiv.className = 'status-indicator status-offline';
+                    statusText.textContent = '模型未加载';
+                }
+            } catch (e) {
+                console.error('Failed to check VLM status:', e);
+            }
+        }
+        
+        async function loadVLM() {
+            const statusDiv = document.getElementById('vlmStatus');
+            const statusText = document.getElementById('vlmStatusText');
+            
+            statusDiv.className = 'status-indicator status-loading';
+            statusText.textContent = '正在加载模型...';
+            
+            try {
+                const res = await fetch('/api/vlm/load', { method: 'POST' });
+                if (res.ok) {
+                    await checkVLMStatus();
+                } else {
+                    const error = await res.json();
+                    alert('模型加载失败: ' + error.detail);
+                    statusDiv.className = 'status-indicator status-offline';
+                    statusText.textContent = '加载失败';
+                }
+            } catch (e) {
+                alert('模型加载失败: ' + e.message);
+                statusDiv.className = 'status-indicator status-offline';
+                statusText.textContent = '加载失败';
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').style.display = 'block';
+            if (tab === 'alarm') {
+                    loadActiveAlarms();
+                } else if (tab === 'config') {
+                    loadConfig();
+                }
+            }
+        
+        let currentConfigTab = 'zones';
+        
+        function showConfigTab(tab) {
+            currentConfigTab = tab;
+            document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.config-content').forEach(c => c.style.display = 'none');
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Config').style.display = 'block';
+            if (tab === 'zones') {
+                loadDangerZones();
+            } else if (tab === 'rules') {
+                loadAlarmRules();
+            } else if (tab === 'notify') {
+                loadNotifyProviders();
+            }
+        }
+        
+        function loadConfig() {
+            loadDangerZones();
+        }
+        
+        async function loadDangerZones() {
+            try {
+                const res = await fetch('/api/config/danger-zones');
+                const data = await res.json();
+                renderDangerZones(data.danger_zones);
+            } catch (e) {
+                console.error('Failed to load danger zones:', e);
+            }
+        }
+        
+        function renderDangerZones(zones) {
+            const container = document.getElementById('zonesConfig');
+            if (Object.keys(zones).length === 0) {
+                container.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">暂无危险区域</div>';
+                return;
+            }
+            
+            let html = '<button class="config-btn add" onclick="addDangerZone()">+ 添加危险区域</button>';
+            for (const [zoneId, zone] of Object.entries(zones)) {
+                const color = zone.color || [255, 0, 0];
+                const colorHex = rgbToHex(color[0], color[1], color[2]);
+                html += `
+                    <div class="config-item" draggable="true" data-zone-id="${zoneId}" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragend="handleDragEnd(event)">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="drag-handle" style="cursor: grab; color: #666; font-size: 20px;">☰</span>
+                            <div style="width: 20px; height: 20px; border-radius: 4px; background: ${colorHex};"></div>
+                            <h4>${zone.name} <span style="color: #666; font-size: 15px;">(${zoneId})</span></h4>
+                        </div>
+                        <div class="config-row"><label>区域类型:</label><span>${getZoneTypeName(zone.zone_type)}</span></div>
+                        <div class="config-row"><label>告警级别:</label><span style="color: ${getLevelColor(zone.alarm_level)};">${getLevelName(zone.alarm_level)}</span></div>
+                        <div class="config-row"><label>启用:</label><input type="checkbox" ${zone.enabled ? 'checked' : ''} onclick="toggleZoneEnabled('${zoneId}', ${!zone.enabled})"></div>
+                        <div class="config-row"><label>坐标点数:</label><span>${zone.points ? zone.points.length : 0}</span></div>
+                        <div class="config-actions">
+                            <button class="config-btn save" onclick="editZone('${zoneId}')">编辑</button>
+                            <button class="config-btn delete" onclick="deleteZone('${zoneId}')">删除</button>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        let draggedZoneId = null;
+        
+        function handleDragStart(e) {
+            draggedZoneId = e.target.dataset.zoneId;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const target = e.target.closest('.config-item');
+            if (target && target.dataset.zoneId !== draggedZoneId) {
+                target.classList.add('drag-over');
+            }
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            
+            const targetZoneId = e.target.closest('.config-item')?.dataset.zoneId;
+            if (targetZoneId && targetZoneId !== draggedZoneId) {
+                reorderZones(draggedZoneId, targetZoneId);
+            }
+            
+            document.querySelectorAll('.config-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+        
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.config-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedZoneId = null;
+        }
+        
+        async function reorderZones(fromZoneId, toZoneId) {
+            try {
+                const response = await fetch('/api/config/danger-zones', {
+                    method: 'GET'
+                });
+                const data = await response.json();
+                const zones = data.danger_zones;
+                
+                const zoneList = Object.entries(zones);
+                const fromIndex = zoneList.findIndex(([id]) => id === fromZoneId);
+                const toIndex = zoneList.findIndex(([id]) => id === toZoneId);
+                
+                if (fromIndex !== -1 && toIndex !== -1) {
+                    const [removed] = zoneList.splice(fromIndex, 1);
+                    zoneList.splice(toIndex, 0, removed);
+                    
+                    const reordered = Object.fromEntries(zoneList);
+                    
+                    await fetch('/api/config/reorder-zones', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ zones: reordered })
+                    });
+                    
+                    showToast('危险区域顺序已更新！', 'success');
+                    loadDangerZones();
+                }
+            } catch (e) {
+                console.error('Failed to reorder zones:', e);
+            }
+        }
+        
+        function getZoneTypeName(type) {
+            const names = { 'general': '普通区域', 'fire_exit': '消防通道', 'corridor': '楼道', 'entrance': '出入口' };
+            return names[type] || type;
+        }
+        
+        function getLevelName(level) {
+            const names = { 'critical': '紧急', 'high': '高', 'medium': '中', 'low': '低' };
+            return names[level] || level;
+        }
+        
+        function getLevelColor(level) {
+            const colors = { 'critical': '#ff0000', 'high': '#ff6600', 'medium': '#ffff00', 'low': '#00ff00' };
+            return colors[level] || '#888';
+        }
+        
+        async function toggleZoneEnabled(zoneId, enabled) {
+            try {
+                await fetch(`/api/config/danger-zones/${zoneId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                loadDangerZones();
+            } catch (e) {
+                console.error('Failed to update zone:', e);
+            }
+        }
+        
+        async function deleteZone(zoneId) {
+            if (!confirm('确定删除该危险区域吗？')) return;
+            try {
+                await fetch(`/api/config/danger-zones/${zoneId}`, { method: 'DELETE' });
+                loadDangerZones();
+            } catch (e) {
+                console.error('Failed to delete zone:', e);
+            }
+        }
+        
+        function addDangerZone() {
+            const container = document.getElementById('zonesConfig');
+            container.innerHTML = `
+                <button class="config-btn cancel" onclick="loadDangerZones()">← 返回</button>
+                <div class="config-item">
+                    <h4>添加危险区域</h4>
+                    <div class="config-row"><label>区域名称:</label><input type="text" id="newZoneName" placeholder="区域名称"></div>
+                    <div class="config-row"><label>区域类型:</label>
+                        <select id="newZoneType">
+                            <option value="general">普通区域</option>
+                            <option value="fire_exit">消防通道</option>
+                            <option value="corridor">楼道</option>
+                            <option value="entrance">出入口</option>
+                        </select>
+                    </div>
+                    <div class="config-row"><label>告警级别:</label>
+                        <select id="newZoneLevel">
+                            <option value="critical">紧急</option>
+                            <option value="high">高</option>
+                            <option value="medium">中</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <div class="config-row"><label>区域颜色:</label>
+                        <input type="color" id="newZoneColor" value="#ff0000" style="width: 50px; height: 25px; cursor: pointer;">
+                        <input type="text" id="newZoneColorHex" value="#ff0000" style="width: 70px;" readonly>
+                    </div>
+                    <div class="config-row"><label style="width: 100%;">区域预览:</label></div>
+                    <div id="newZonePreview" style="width: 100%; height: 120px; border: 1px dashed #444; border-radius: 8px; background: #1a1a1a; margin-bottom: 10px; position: relative;">
+                        <canvas id="newZonePreviewCanvas" style="width: 100%; height: 100%;"></canvas>
+                        <div id="previewHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 16px;">添加坐标点后预览</div>
+                    </div>
+                    <div class="config-row"><label style="width: 100%;">
+                        坐标点: <button class="config-btn add" style="margin-left: 10px; padding: 2px 6px;" onclick="addNewPoint()">+ 添加点</button>
+                    </label></div>
+                    <div id="newZonePoints" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;">
+                        <div style="color: #666; font-size: 16px; padding: 5px;">点击上方按钮添加坐标点，或在视频画面绘制</div>
+                    </div>
+                    <div class="config-actions">
+                        <button class="config-btn save" onclick="saveNewZone()">保存</button>
+                        <button class="config-btn cancel" onclick="loadDangerZones()">取消</button>
+                    </div>
+                </div>
+            `;
+            window.newZonePointsArray = [];
+            
+            document.getElementById('newZoneColor').addEventListener('input', function(e) {
+                document.getElementById('newZoneColorHex').value = e.target.value;
+                updateNewZonePreview();
+            });
+        }
+        
+        function addNewPoint() {
+            const container = document.getElementById('newZonePoints');
+            const index = window.newZonePointsArray.length;
+            
+            window.newZonePointsArray.push({ x: 100 + index * 50, y: 50 + index * 30 });
+            
+            container.innerHTML = '';
+            window.newZonePointsArray.forEach((point, i) => {
+                const pd = document.createElement('div');
+                pd.className = 'config-row';
+                pd.innerHTML = `
+                    <label>点${i + 1}:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" placeholder="X" style="width: 60px;" id="newPointX${i}" value="${point.x}">
+                        <input type="number" placeholder="Y" style="width: 60px;" id="newPointY${i}" value="${point.y}">
+                        <button class="config-btn delete" style="padding: 2px 6px; font-size: 14px;" onclick="removeNewPoint(${i})">删除</button>
+                    </div>
+                `;
+                const inputX = pd.querySelector(`#newPointX${i}`);
+                const inputY = pd.querySelector(`#newPointY${i}`);
+                inputX.addEventListener('input', updateNewZonePreview);
+                inputY.addEventListener('input', updateNewZonePreview);
+                container.appendChild(pd);
+            });
+            
+            updateNewZonePreview();
+        }
+        
+        function updateNewZonePreview() {
+            const canvas = document.getElementById('newZonePreviewCanvas');
+            if (!canvas) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const color = document.getElementById('newZoneColor')?.value || '#ff0000';
+            const hint = document.getElementById('previewHint');
+            
+            const points = [];
+            if (window.newZonePointsArray) {
+                window.newZonePointsArray.forEach((_, i) => {
+                    const x = parseInt(document.getElementById(`newPointX${i}`)?.value);
+                    const y = parseInt(document.getElementById(`newPointY${i}`)?.value);
+                    if (!isNaN(x) && !isNaN(y)) {
+                        points.push({ x: (x / 800) * canvas.width, y: (y / 600) * canvas.height });
+                    }
+                });
+            }
+            
+            if (points.length >= 2) {
+                hint.style.display = 'none';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = color.replace(')', ', 0.2)').replace('rgb', 'rgba') || color + '40';
+                
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                
+                if (points.length >= 3) {
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.stroke();
+                
+                points.forEach((point, i) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(i + 1, point.x - 3, point.y + 3);
+                });
+            } else {
+                hint.style.display = 'block';
+            }
+        }
+        
+        function removeNewPoint(index) {
+            window.newZonePointsArray.splice(index, 1);
+            const container = document.getElementById('newZonePoints');
+            container.innerHTML = '';
+            
+            window.newZonePointsArray.forEach((_, i) => {
+                const pd = document.createElement('div');
+                pd.className = 'config-row';
+                pd.innerHTML = `
+                    <label>点${i + 1}:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" placeholder="X" style="width: 60px;" id="newPointX${i}" value="${window.newZonePointsArray[i].x || ''}">
+                        <input type="number" placeholder="Y" style="width: 60px;" id="newPointY${i}" value="${window.newZonePointsArray[i].y || ''}">
+                        <button class="config-btn delete" style="padding: 2px 6px; font-size: 14px;" onclick="removeNewPoint(${i})">删除</button>
+                    </div>
+                `;
+                container.appendChild(pd);
+            });
+        }
+        
+        async function saveNewZone() {
+            const name = document.getElementById('newZoneName').value || '新区域';
+            const zoneType = document.getElementById('newZoneType').value;
+            const level = document.getElementById('newZoneLevel').value;
+            const colorHex = document.getElementById('newZoneColor')?.value || '#ff0000';
+            const color = hexToRgb(colorHex);
+            
+            const points = [];
+            if (window.newZonePointsArray && window.newZonePointsArray.length > 0) {
+                window.newZonePointsArray.forEach((_, i) => {
+                    const x = parseInt(document.getElementById(`newPointX${i}`)?.value);
+                    const y = parseInt(document.getElementById(`newPointY${i}`)?.value);
+                    if (!isNaN(x) && !isNaN(y)) {
+                        points.push([x, y]);
+                    }
+                });
+            }
+            
+            if (points.length < 3) {
+                showToast('请至少添加3个坐标点', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/config/danger-zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name, 
+                        zone_type: zoneType, 
+                        alarm_level: level, 
+                        enabled: true,
+                        points,
+                        color
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast('危险区域添加成功！', 'success');
+                    loadDangerZones();
+                } else {
+                    showToast('添加失败，请重试', 'error');
+                }
+            } catch (e) {
+                console.error('Failed to add zone:', e);
+                showToast('添加失败，请重试', 'error');
+            }
+        }
+        
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [
+                parseInt(result[1], 16),
+                parseInt(result[2], 16),
+                parseInt(result[3], 16)
+            ] : [255, 0, 0];
+        }
+        
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+        
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+        
+        function editZone(zoneId) {
+            fetch('/api/config/danger-zones')
+                .then(res => res.json())
+                .then(data => {
+                    const zone = data.danger_zones[zoneId];
+                    if (!zone) return;
+                    
+                    const points = zone.points || [];
+                    const color = zone.color || [255, 0, 0];
+                    const colorHex = rgbToHex(color[0], color[1], color[2]);
+                    
+                    let pointsHtml = '';
+                    points.forEach((point, i) => {
+                        pointsHtml += `
+                            <div class="config-row">
+                                <label>点${i + 1}:</label>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="number" placeholder="X" style="width: 60px;" id="editPointX${i}" value="${point[0]}">
+                                    <input type="number" placeholder="Y" style="width: 60px;" id="editPointY${i}" value="${point[1]}">
+                                    <button class="config-btn delete" style="padding: 2px 6px; font-size: 14px;" onclick="removeEditPoint(${i})">删除</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    const container = document.getElementById('zonesConfig');
+                    container.innerHTML = `
+                        <button class="config-btn cancel" onclick="loadDangerZones()">← 返回</button>
+                        <div class="config-item">
+                            <h4>编辑危险区域</h4>
+                            <div class="config-row"><label>区域名称:</label><input type="text" id="editZoneName" value="${zone.name}"></div>
+                            <div class="config-row"><label>区域类型:</label>
+                                <select id="editZoneType">
+                                    <option value="general" ${zone.zone_type === 'general' ? 'selected' : ''}>普通区域</option>
+                                    <option value="fire_exit" ${zone.zone_type === 'fire_exit' ? 'selected' : ''}>消防通道</option>
+                                    <option value="corridor" ${zone.zone_type === 'corridor' ? 'selected' : ''}>楼道</option>
+                                    <option value="entrance" ${zone.zone_type === 'entrance' ? 'selected' : ''}>出入口</option>
+                                </select>
+                            </div>
+                            <div class="config-row"><label>告警级别:</label>
+                                <select id="editZoneLevel">
+                                    <option value="critical" ${zone.alarm_level === 'critical' ? 'selected' : ''}>紧急</option>
+                                    <option value="high" ${zone.alarm_level === 'high' ? 'selected' : ''}>高</option>
+                                    <option value="medium" ${zone.alarm_level === 'medium' ? 'selected' : ''}>中</option>
+                                    <option value="low" ${zone.alarm_level === 'low' ? 'selected' : ''}>低</option>
+                                </select>
+                            </div>
+                            <div class="config-row"><label>区域颜色:</label>
+                                <input type="color" id="editZoneColor" value="${colorHex}" style="width: 50px; height: 25px; cursor: pointer;">
+                                <input type="text" id="editZoneColorHex" value="${colorHex}" style="width: 70px;" readonly>
+                            </div>
+                            <div class="config-row"><label>启用:</label><input type="checkbox" id="editZoneEnabled" ${zone.enabled ? 'checked' : ''}></div>
+                            <div class="config-row"><label style="width: 100%;">区域预览:</label></div>
+                            <div id="editZonePreview" style="width: 100%; height: 120px; border: 1px dashed #444; border-radius: 8px; background: #1a1a1a; margin-bottom: 10px; position: relative;">
+                                <canvas id="editZonePreviewCanvas" style="width: 100%; height: 100%;"></canvas>
+                                <div id="editPreviewHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-size: 16px;">添加坐标点后预览</div>
+                            </div>
+                            <div class="config-row"><label style="width: 100%;">
+                                坐标点: <button class="config-btn add" style="margin-left: 10px; padding: 2px 6px;" onclick="addEditPoint()">+ 添加点</button>
+                            </label></div>
+                            <div id="editZonePoints" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;">
+                                ${pointsHtml || '<div style="color: #666; font-size: 16px; padding: 5px;">点击上方按钮添加坐标点</div>'}
+                            </div>
+                            <div class="config-actions">
+                                <button class="config-btn save" onclick="saveEditZone('${zoneId}')">保存</button>
+                                <button class="config-btn cancel" onclick="loadDangerZones()">取消</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    window.editZonePointsArray = points.map(p => ({ x: p[0], y: p[1] }));
+                    
+                    document.getElementById('editZoneColor').addEventListener('input', function(e) {
+                        document.getElementById('editZoneColorHex').value = e.target.value;
+                        updateEditZonePreview();
+                    });
+                    
+                    updateEditZonePreview();
+                });
+        }
+        
+        function addEditPoint() {
+            const container = document.getElementById('editZonePoints');
+            const index = window.editZonePointsArray.length;
+            
+            window.editZonePointsArray.push({ x: 100 + index * 50, y: 50 + index * 30 });
+            
+            container.innerHTML = '';
+            window.editZonePointsArray.forEach((point, i) => {
+                const pd = document.createElement('div');
+                pd.className = 'config-row';
+                pd.innerHTML = `
+                    <label>点${i + 1}:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" placeholder="X" style="width: 60px;" id="editPointX${i}" value="${point.x}">
+                        <input type="number" placeholder="Y" style="width: 60px;" id="editPointY${i}" value="${point.y}">
+                        <button class="config-btn delete" style="padding: 2px 6px; font-size: 14px;" onclick="removeEditPoint(${i})">删除</button>
+                    </div>
+                `;
+                const inputX = pd.querySelector(`#editPointX${i}`);
+                const inputY = pd.querySelector(`#editPointY${i}`);
+                inputX.addEventListener('input', updateEditZonePreview);
+                inputY.addEventListener('input', updateEditZonePreview);
+                container.appendChild(pd);
+            });
+            
+            updateEditZonePreview();
+        }
+        
+        function updateEditZonePreview() {
+            const canvas = document.getElementById('editZonePreviewCanvas');
+            if (!canvas) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const color = document.getElementById('editZoneColor')?.value || '#ff0000';
+            const hint = document.getElementById('editPreviewHint');
+            
+            const points = [];
+            if (window.editZonePointsArray) {
+                window.editZonePointsArray.forEach((_, i) => {
+                    const x = parseInt(document.getElementById(`editPointX${i}`)?.value);
+                    const y = parseInt(document.getElementById(`editPointY${i}`)?.value);
+                    if (!isNaN(x) && !isNaN(y)) {
+                        points.push({ x: (x / 800) * canvas.width, y: (y / 600) * canvas.height });
+                    }
+                });
+            }
+            
+            if (points.length >= 2) {
+                hint.style.display = 'none';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = color.replace(')', ', 0.2)').replace('rgb', 'rgba') || color + '40';
+                
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                
+                if (points.length >= 3) {
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.stroke();
+                
+                points.forEach((point, i) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(i + 1, point.x - 3, point.y + 3);
+                });
+            } else {
+                hint.style.display = 'block';
+            }
+        }
+        
+        function removeEditPoint(index) {
+            window.editZonePointsArray.splice(index, 1);
+            const container = document.getElementById('editZonePoints');
+            container.innerHTML = '';
+            
+            window.editZonePointsArray.forEach((point, i) => {
+                const pd = document.createElement('div');
+                pd.className = 'config-row';
+                pd.innerHTML = `
+                    <label>点${i + 1}:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" placeholder="X" style="width: 60px;" id="editPointX${i}" value="${point.x}">
+                        <input type="number" placeholder="Y" style="width: 60px;" id="editPointY${i}" value="${point.y}">
+                        <button class="config-btn delete" style="padding: 2px 6px; font-size: 14px;" onclick="removeEditPoint(${i})">删除</button>
+                    </div>
+                `;
+                container.appendChild(pd);
+            });
+        }
+        
+        async function saveEditZone(zoneId) {
+            const name = document.getElementById('editZoneName').value;
+            const zoneType = document.getElementById('editZoneType').value;
+            const level = document.getElementById('editZoneLevel').value;
+            const enabled = document.getElementById('editZoneEnabled').checked;
+            const colorHex = document.getElementById('editZoneColor')?.value || '#ff0000';
+            const color = hexToRgb(colorHex);
+            
+            const points = [];
+            if (window.editZonePointsArray && window.editZonePointsArray.length > 0) {
+                window.editZonePointsArray.forEach((_, i) => {
+                    const x = parseInt(document.getElementById(`editPointX${i}`)?.value);
+                    const y = parseInt(document.getElementById(`editPointY${i}`)?.value);
+                    if (!isNaN(x) && !isNaN(y)) {
+                        points.push([x, y]);
+                    }
+                });
+            }
+            
+            if (points.length < 3) {
+                showToast('请至少保留3个坐标点', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/config/danger-zones/${zoneId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, zone_type: zoneType, alarm_level: level, enabled, points, color })
+                });
+                
+                if (response.ok) {
+                    showToast('危险区域更新成功！', 'success');
+                    loadDangerZones();
+                } else {
+                    showToast('更新失败，请重试', 'error');
+                }
+            } catch (e) {
+                console.error('Failed to update zone:', e);
+                showToast('更新失败，请重试', 'error');
+            }
+        }
+        
+        async function loadAlarmRules() {
+            try {
+                const res = await fetch('/api/config/alarm-rules');
+                const data = await res.json();
+                renderAlarmRules(data.alarm_rules);
+            } catch (e) {
+                console.error('Failed to load alarm rules:', e);
+            }
+        }
+        
+        function renderAlarmRules(rules) {
+            const container = document.getElementById('rulesConfig');
+            if (Object.keys(rules).length === 0) {
+                container.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">暂无告警规则</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const [ruleId, rule] of Object.entries(rules)) {
+                html += `
+                    <div class="config-item">
+                        <h4>${rule.name}</h4>
+                        <div class="config-row"><label>规则ID:</label><span>${ruleId}</span></div>
+                        <div class="config-row"><label>阈值:</label><input type="number" value="${rule.threshold}" step="0.1" onchange="updateRuleThreshold('${ruleId}', this.value)"></div>
+                        <div class="config-row"><label>告警级别:</label>
+                            <select onchange="updateRuleLevel('${ruleId}', this.value)">
+                                <option value="critical" ${rule.alarm_level === 'critical' ? 'selected' : ''}>紧急</option>
+                                <option value="high" ${rule.alarm_level === 'high' ? 'selected' : ''}>高</option>
+                                <option value="medium" ${rule.alarm_level === 'medium' ? 'selected' : ''}>中</option>
+                                <option value="low" ${rule.alarm_level === 'low' ? 'selected' : ''}>低</option>
+                            </select>
+                        </div>
+                        <div class="config-row"><label>最小间隔(秒):</label><input type="number" value="${rule.min_interval}" onchange="updateRuleInterval('${ruleId}', this.value)"></div>
+                        <div class="config-row"><label>启用:</label><input type="checkbox" ${rule.enabled ? 'checked' : ''} onclick="toggleRuleEnabled('${ruleId}', ${!rule.enabled})"></div>
+                        <div class="config-row"><label>通知策略:</label><span>${rule.notify_strategy.join(', ')}</span></div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        async function updateRuleThreshold(ruleId, threshold) {
+            try {
+                await fetch(`/api/config/alarm-rules/${ruleId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold: parseFloat(threshold) })
+                });
+            } catch (e) {
+                console.error('Failed to update rule:', e);
+            }
+        }
+        
+        async function updateRuleLevel(ruleId, level) {
+            try {
+                await fetch(`/api/config/alarm-rules/${ruleId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ alarm_level: level })
+                });
+            } catch (e) {
+                console.error('Failed to update rule:', e);
+            }
+        }
+        
+        async function updateRuleInterval(ruleId, interval) {
+            try {
+                await fetch(`/api/config/alarm-rules/${ruleId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ min_interval: parseInt(interval) })
+                });
+            } catch (e) {
+                console.error('Failed to update rule:', e);
+            }
+        }
+        
+        async function toggleRuleEnabled(ruleId, enabled) {
+            try {
+                await fetch(`/api/config/alarm-rules/${ruleId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+            } catch (e) {
+                console.error('Failed to update rule:', e);
+            }
+        }
+        
+        async function loadNotifyProviders() {
+            try {
+                const res = await fetch('/api/config/notify-providers');
+                const data = await res.json();
+                renderNotifyProviders(data.notify_providers);
+            } catch (e) {
+                console.error('Failed to load notify providers:', e);
+            }
+        }
+        
+        function renderNotifyProviders(providers) {
+            const container = document.getElementById('notifyConfig');
+            let html = `
+                <div class="config-item">
+                    <h4>通知渠道设置</h4>
+            `;
+            
+            const providerNames = { 'wecom': '企业微信', 'dingtalk': '钉钉', 'email': '邮件', 'sms': '短信' };
+            
+            for (const [providerId, provider] of Object.entries(providers)) {
+                html += `
+                    <div class="config-row">
+                        <label>${providerNames[providerId] || providerId}:</label>
+                        <input type="checkbox" ${provider.enabled ? 'checked' : ''} onclick="toggleNotifyProvider('${providerId}', ${!provider.enabled})">
+                    </div>
+                `;
+            }
+            
+            html += `
+                </div>
+                <div class="config-item">
+                    <h4>告警级别设置</h4>
+            `;
+            
+            fetch('/api/config/alarm-levels')
+                .then(res => res.json())
+                .then(data => {
+                    for (const [levelId, level] of Object.entries(data.alarm_levels)) {
+                        html += `
+                            <div class="config-row">
+                                <label><span style="color: ${level.color};">${level.name}</span>:</label>
+                                <span>超时 ${level.timeout} 秒</span>
+                            </div>
+                        `;
+                    }
+                    html += '</div>';
+                    container.innerHTML = html;
+                });
+        }
+        
+        async function toggleNotifyProvider(providerId, enabled) {
+            try {
+                await fetch(`/api/config/notify-providers/${providerId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+            } catch (e) {
+                console.error('Failed to update provider:', e);
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            const useImage = document.getElementById('useImage').checked;
+            
+            if (!message) return;
+            
+            addMessage('user', message);
+            input.value = '';
+            
+            try {
+                const response = await fetch('/api/vlm/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, use_image: useImage })
+                });
+                
+                const data = await response.json();
+                
+                if (data.response) {
+                    addMessage('assistant', data.response);
+                } else {
+                    addMessage('assistant', '对话失败: ' + data.error);
+                }
+            } catch (e) {
+                addMessage('assistant', '对话失败: ' + e.message);
+            }
+        }
+
+        
+        function addMessage(role, content) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatar = role === 'user' ? '👤' : '🤖';
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        async function clearChat() {
+            await fetch('/api/vlm/clear-history', { method: 'POST' });
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="message assistant">
+                    <div class="message-content">您好！我是智能视频分析助手。请问有什么可以帮助您的？</div>
+                    <div class="message-time">刚刚</div>
+                </div>
+            `;
+        }
+        
+        let currentAlarmTab = 'active';
+        
+        function showAlarmTab(tab) {
+            currentAlarmTab = tab;
+            document.querySelectorAll('.alarm-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.alarm-list').forEach(l => l.style.display = 'none');
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Alarms').style.display = 'block';
+            
+            if (tab === 'active') {
+                loadActiveAlarms();
+            } else {
+                loadAlarmHistory();
+            }
+        }
+        
+        async function loadActiveAlarms() {
+            try {
+                const res = await fetch('/api/alarm/active');
+                const data = await res.json();
+                renderAlarms(data.alarms, 'activeAlarms');
+            } catch (e) {
+                console.error('Failed to load active alarms:', e);
+            }
+        }
+        
+        async function loadAlarmHistory() {
+            try {
+                const res = await fetch('/api/alarm/history?limit=50');
+                const data = await res.json();
+                renderAlarms(data.alarms, 'historyAlarms');
+            } catch (e) {
+                console.error('Failed to load alarm history:', e);
+            }
+        }
+        
+        function renderAlarms(alarms, containerId) {
+            const container = document.getElementById(containerId);
+            
+            if (!alarms || alarms.length === 0) {
+                container.innerHTML = '<div class="no-alarms">暂无告警记录</div>';
+                return;
+            }
+            
+            // 判断是否是历史记录
+            const isHistory = containerId === 'historyAlarms';
+            
+            container.innerHTML = alarms.map(alarm => {
+                const timestamp = new Date(alarm.timestamp).toLocaleString();
+                const acknowledged = alarm.acknowledged ? 'acknowledged' : '';
+                
+                return `
+                    <div class="alarm-item ${acknowledged}">
+                        <div class="alarm-type">${getAlarmTypeName(alarm.type)}</div>
+                        <div class="alarm-message">${alarm.message}</div>
+                        <div class="alarm-time">${timestamp}</div>
+                        <div class="alarm-actions">
+                            ${!isHistory && !alarm.acknowledged ? `
+                                <button class="alarm-btn alarm-btn-ack" onclick="acknowledgeAlarm(${alarm.id})">确认</button>
+                            ` : ''}
+                            <button class="alarm-btn alarm-btn-ai" onclick="showAIReasoning(${alarm.id}, '${alarm.type}', '${alarm.message}')">🤖 AI辅助决策</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function getAlarmTypeName(type) {
+            const types = {
+                'fall': '🔴 摔倒检测',
+                'danger_zone': '🔴 危险区域入侵',
+                'fire_exit': '🟠 消防通道占用',
+                'corridor': '🟡 楼道异常',
+                'corridor_parking': '🟡 楼道停车',
+                'fire_exit_parking': '🟠 消防通道停车',
+                'crossing': '🔴 越界检测',
+                'loitering': '🟡 徘徊检测',
+                'abandoned': '🟡 遗留物检测',
+                'intrusion': '🔴 入侵检测'
+            };
+            return types[type] || `⚠ ${type}`;
+        }
+        
+        async function acknowledgeAlarm(alarmId) {
+            try {
+                const res = await fetch(`/api/alarm/acknowledge/${alarmId}`, { method: 'POST' });
+                if (res.ok) {
+                    if (currentAlarmTab === 'active') {
+                        loadActiveAlarms();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to acknowledge alarm:', e);
+            }
+        }
+        
+        function refreshAlarms() {
+            if (currentAlarmTab === 'active') {
+                loadActiveAlarms();
+            } else {
+                loadAlarmHistory();
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVideoButtons();
+            checkVLMStatus();
+            loadCameraSources();
+            
+            if (!vlmLoaded) {
+                loadVLM();
+            }
+            
+            setInterval(() => {
+                if (currentTab === 'alarm' && currentAlarmTab === 'active') {
+                    loadActiveAlarms();
+                }
+            }, 5000);
+        });
+        
+        function closeModal() {
+            const overlay = document.getElementById('ai-reasoning-modal');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+        
+        function showModal() {
+            const overlay = document.getElementById('ai-reasoning-modal');
+            if (overlay) {
+                overlay.classList.add('show');
+            }
+        }
+        
+        async function showAIReasoning(alarmId, eventType, message) {
+            const modalContent = document.getElementById('ai-reasoning-content');
+            
+            modalContent.innerHTML = '<div class="modal-loading">🤖 正在进行AI推理分析...</div>';
+            showModal();
+            
+            try {
+                const response = await fetch('/api/reasoning/reason', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: eventType,
+                        event_id: alarmId,
+                        description: message,
+                        confidence: 0.85
+                    })
+                });
+                
+                const data = await response.json();
+                
+                renderAIReasoningModal(data);
+            } catch (e) {
+                modalContent.innerHTML = `
+                    <div class="reasoning-section">
+                        <div style="color: #f44336; text-align: center; padding: 20px;">
+                            推理失败: ${e.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderAIReasoningModal(data) {
+            const modalContent = document.getElementById('ai-reasoning-content');
+            
+            const riskLevelClass = `risk-level-${data.risk_level?.toLowerCase() || 'medium'}`;
+            const riskLevelText = data.risk_level || 'MEDIUM';
+            const riskScore = data.risk_score || 50;
+            
+            const reasoningChain = data.reasoning_chain || ['正在分析...'];
+            const recommendations = data.recommendation || ['暂无建议'];
+            const report = data.report || '暂无分析报告';
+            
+            modalContent.innerHTML = `
+                <div class="ai-reasoning-content">
+                    <div class="reasoning-section">
+                        <div class="reasoning-section-title">
+                            <span>⚠️</span> 当前事件
+                        </div>
+                        <div style="color: #FF9800; font-size: 20px; font-weight: bold; margin-bottom: 5px;">${getAlarmTypeName(data.event_type) || data.event_type}</div>
+                        <div style="color: #ddd; font-size: 17px;">${data.description || '暂无描述'}</div>
+                    </div>
+                    
+                    <div class="reasoning-section">
+                        <div class="reasoning-section-title">
+                            <span>📊</span> 风险评估
+                        </div>
+                        <div class="risk-display">
+                            <span class="risk-level-badge ${riskLevelClass}">${riskLevelText}</span>
+                            <div>
+                                <div class="risk-score-display">${riskScore}</div>
+                                <div style="color: #666; font-size: 16px;">/100</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section">
+                        <div class="reasoning-section-title">
+                            <span>🔗</span> AI推理链
+                        </div>
+                        <div class="reasoning-chain-visual">
+                            ${reasoningChain.map((item, index) => `
+                                <div class="chain-node-item">${item}</div>
+                                ${index < reasoningChain.length - 1 ? '<div class="chain-arrow-item">↓</div>' : ''}
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section">
+                        <div class="reasoning-section-title">
+                            <span>💡</span> 处置建议
+                        </div>
+                        <ul class="recommendation-list">
+                            ${Array.isArray(recommendations) ? recommendations.map((rec, index) => `
+                                <li><span class="recommendation-number">${index + 1}.</span>${rec}</li>
+                            `).join('') : `<li><span class="recommendation-number">1.</span>${recommendations}</li>`}
+                        </ul>
+                    </div>
+                    
+                    <div class="reasoning-section">
+                        <div class="reasoning-section-title">
+                            <span>📝</span> AI分析报告
+                        </div>
+                        <div class="ai-report-text">${report}</div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+    
+    <!-- AI推理弹窗 -->
+    <div id="ai-reasoning-modal" class="modal-overlay" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>🤖</span> AI辅助决策
+                </div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="ai-reasoning-content">
+                    <div class="modal-loading">🤖 正在加载...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
